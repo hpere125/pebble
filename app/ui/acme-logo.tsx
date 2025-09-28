@@ -1,11 +1,22 @@
 import { audiowide } from '@/app/ui/fonts';
 
-export default function AcmeLogo() {
+type Props = {
+  className?: string;
+};
+
+/**
+ * Brand mark for the sidebar header. Kept text-based for easy theming.
+ */
+export default function AcmeLogo({ className = '' }: Props) {
   return (
     <div
-      className={`${audiowide.className} flex flex-row items-center leading-none text-white`}
+      className={`
+        ${audiowide.className}
+        flex flex-col leading-none ${className}
+      `}
     >
-      <p className="text-[44px]">Pebble</p>
+      <p className="text-[34px] font-semibold tracking-tight">Pebble</p>
+      <span className="sr-only">Pebble — Task Management</span>
     </div>
   );
 }

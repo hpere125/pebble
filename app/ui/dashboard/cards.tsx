@@ -1,3 +1,5 @@
+// app/ui/dashboard/cards.tsx
+import type { ComponentType, SVGProps } from 'react';
 import {
   BanknotesIcon,
   ClockIcon,
@@ -5,64 +7,101 @@ import {
   InboxIcon,
 } from '@heroicons/react/24/outline';
 import { lusitana } from '@/app/ui/fonts';
-
 import { fetchCardData } from '@/app/lib/data';
 
-const iconMap = {
+type CardType = 'invoices' | 'customers' | 'pending' | 'collected';
+type IconComp = ComponentType<SVGProps<SVGSVGElement>>;
+
+const ICONS: Record<CardType, IconComp> = {
   collected: BanknotesIcon,
-  customers: UserGroupIcon,
   pending: ClockIcon,
   invoices: InboxIcon,
+  customers: UserGroupIcon,
 };
 
-export default async function CardWrapper() {
+const LABELS: Record<CardType, string> = {
+  collected: 'Total Collected',
+  pending: 'Pending Payment',
+  invoices: 'Total Invoices',
+  customers: 'Total Customers',
+};
 
+const ACCENT: Record<CardType, string> = {
+  collected: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+  pending: 'bg-amber-50 text-amber-700 ring-amber-200',
+  invoices: 'bg-blue-50 text-blue-700 ring-blue-200',
+  customers: 'bg-purple-50 text-purple-700 ring-purple-200',
+};
+
+// Formatting helpers
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const INT = new Intl.NumberFormat('en-US');
+
+function toNumber(raw: number | string): number {
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw.replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+function display(type: CardType, raw: number | string): string {
+  const n = toNumber(raw);
+  return type === 'collected' || type === 'pending' ? USD.format(n) : INT.format(n);
+}
+
+export default async function CardWrapper() {
   const {
     numberOfInvoices,
     numberOfCustomers,
     totalPaidInvoices,
     totalPendingInvoices,
   } = await fetchCardData();
-  
+
   return (
     <>
-      {/* NOTE: Uncomment this code in Chapter 9 */}
-
-      <Card title="Collected" value={totalPaidInvoices} type="collected" />
-      <Card title="Pending" value={totalPendingInvoices} type="pending" />
-      <Card title="Total Invoices" value={numberOfInvoices} type="invoices" />
-      <Card
-        title="Total Customers"
-        value={numberOfCustomers}
-        type="customers"
-      />
+      <KpiCard type="collected" value={totalPaidInvoices} />
+      <KpiCard type="pending" value={totalPendingInvoices} />
+      <KpiCard type="invoices" value={numberOfInvoices} />
+      <KpiCard type="customers" value={numberOfCustomers} />
     </>
   );
 }
 
-export function Card({
-  title,
-  value,
-  type,
-}: {
-  title: string;
-  value: number | string;
-  type: 'invoices' | 'customers' | 'pending' | 'collected';
-}) {
-  const Icon = iconMap[type];
+function KpiCard({ type, value }: { type: CardType; value: number | string }) {
+  const Icon = ICONS[type];
 
   return (
-    <div className="rounded-xl bg-gray-50 p-2 shadow-sm">
-      <div className="flex p-4">
-        {Icon ? <Icon className="h-5 w-5 text-gray-700" /> : null}
-        <h3 className="ml-2 text-sm font-medium">{title}</h3>
+    <article
+      aria-label={LABELS[type]}
+      className="relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm ring-1 ring-gray-200/70 transition hover:shadow-md"
+    >
+      {/* smaller icon chip */}
+      <div
+        className={`absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-xl ring-1 ${ACCENT[type]}`}
+      >
+        <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
+
+      <h3 className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+        {LABELS[type]}
+      </h3>
+
+      {/* noticeably smaller KPI value */}
       <p
         className={`${lusitana.className}
-          truncate rounded-xl bg-white px-4 py-8 text-center text-2xl`}
+          mt-1
+          text-lg sm:text-xl md:text-2xl lg:text-3xl
+          font-semibold leading-snug tracking-tight
+          text-gray-900 tabular-nums
+        `}
       >
-        {value}
+        {display(type, value)}
       </p>
-    </div>
+
+      <p className="mt-1.5 text-[11px] text-gray-500">
+        Updated {new Date().toLocaleDateString()}
+      </p>
+    </article>
   );
 }
